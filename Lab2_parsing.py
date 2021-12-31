@@ -1,10 +1,16 @@
+import logging
+#from os import 
+from typing import Counter
 import requests
 from bs4 import BeautifulSoup
 import sqlite3
 
+logging.basicConfig(filename='log',filemode='w', format='%(asctime)s - %(message)s')
 
 con=sqlite3.connect(r'Cian/Cian_inform.db')
 cur = con.cursor()
+
+file_debug_information=open('debug.txt', 'w')
 
 site='https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=1&room2=1'
 
@@ -31,15 +37,18 @@ def parsing_page(url):
 
     ID=url.replace('https://www.cian.ru/sale/flat/','').replace('/','')
     Name=[i.text for i in bs_pars.find_all(class_="a10a3f92e9--title--UEAG3")]
-    Area=[i.text.replace('\xa0м²','').replace(',','.') for i in bs_pars.find_all(class_="a10a3f92e9--info-value--bm3DC")]
+    Area=[i.text.replace('\xa0м²','').replace(',','.').replace(' ','') for i in bs_pars.find_all(class_="a10a3f92e9--info-value--bm3DC")]
     Price=[i.text.replace('\xa0', ' ').replace('₽','').replace(' ','') for i in bs_pars.find_all(itemprop='price')] # pulling out the price
     Price_currency=[i['content'] for i in bs_pars.find_all(itemprop='priceCurrency')] # pulling currency
     Phone_Number=[i.text for i in bs_pars.find_all(class_="a10a3f92e9--phone--_OimW")]
     address=[i for i in bs_pars.find_all(itemprop='name')]
     #Descriptor=[i.text.replace('\n',' ') for i in bs_pars.find_all(itemprop="description")]
     
+    try:
+        Information=[ID,Name[0],address[-1]['content'],float(Area[0]),Price[0],Price_currency[0],Phone_Number[0],url]
+    except:
+        file_debug_information.write(ID,Name,address,Area,Price,Price_currency,Phone_Number,url,'\n')
 
-    Information=[ID,Name[0],address[-1]['content'],float(Area[0]),Price[0],Price_currency[0],Phone_Number[0],url]
     return Information
 
 
@@ -57,9 +66,20 @@ def parsing_offer(connect_db,var):
         print('Общее число записей',len(temporary_massive))
         temporary_massive=list(set(temporary_massive))
         print('Число уникальных записей', len(temporary_massive))
+        Counter=0
+
         for link in temporary_massive:
-            insert_table(connect_db,parsing_page(link),room)
+            Counter+=1
+            print('Запись', Counter, 'из', len(temporary_massive))
+            try:
+                insert_table(connect_db,parsing_page(link),room)
+            except:
+                logging.error('This is an error insert', exc_info=True)
+                logging.info('This is an error insert', exc_info=True)
+                continue
+
             con.commit()
+            
 
     print('Общее число записей',len(var))
     var=list(set(var))
@@ -92,13 +112,23 @@ def insert_table(connect_db,massiv,count_room):
 
 
 
-a=input("Выберите вариант:\n1.Создать таблицу напишите - 1;\n2.Парсинг страниц (только после создания или пересоздания таблицы) - 2\n",)
-
-a=int(a)
-if a==1:    
-    create_table(cur)
-elif a==2:
-    parsing_offer(cur,Apart_link)
 
 
+flag=1
+while flag==True:
+    try:
+        a=int(input("Выберите вариант:\n1.Создать таблицу напишите - 1;\n2.Парсинг страниц и заполнение таблицы(только после создания или пересоздания таблицы) - 2;\n3.Выход - 3\n",))
+    except:
+        logging.error("Error input a",exc_info=True)
+    
+    if a==1:    
+        create_table(cur)
+        print('\nТаблица создана\n')
+    elif a==2:
+        parsing_offer(cur,Apart_link)
+        print('\nТаблица заполнина\n')
+    elif a==3:
+        flag=0
+        
+file_debug_information.close()
 con.close()
