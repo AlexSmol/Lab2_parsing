@@ -1,5 +1,6 @@
 import logging
 #from os import 
+from bottle import route, run, request, template
 from typing import Counter
 import requests
 from bs4 import BeautifulSoup
@@ -10,12 +11,35 @@ logging.basicConfig(filename='log',filemode='w', format='%(asctime)s - %(message
 con=sqlite3.connect(r'Cian/Cian_inform.db')
 cur = con.cursor()
 
-file_debug_information=open('debug.txt', 'w')
+@route('/Cian')
+def select():
+    cur.execute("SELECT * FROM Flat")
+    result = cur.fetchall()
+    result.replace(' ','\n')
+    print(result)
+    return template('<b>{{name}}</b>!', name=result)
+
+@route('/hello/<name>')
+def index(name):
+    return template('<b>Hello {{name}}</b>!', name=name)
+
+@route('/insert', method='GET')
+def insert():
+    if request.GET.save:
+        id = str(cursor.lastrowid+1)
+        href = request.GET.href.strip()
+        title = request.GET.title.strip()
+        cursor.execute("INSERT INTO links VALUES(?,?,?)", (id, href, title))
+        new_id = cursor.lastrowid
+
+        conn.commit()
+
+        return '<p>>The new task was inserted into the database, the ID is %s</p>' % new_id
+    else:
+        return template('new_task.tpl')
+
 
 site='https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=1&room2=1'
-
-Apart_link=[]
-Rooms=[1,2,3,4,5,6]
 
 def page_link(url):
     start_url='https://www.cian.ru'
@@ -43,12 +67,9 @@ def parsing_page(url):
     Phone_Number=[i.text for i in bs_pars.find_all(class_="a10a3f92e9--phone--_OimW")]
     address=[i for i in bs_pars.find_all(itemprop='name')]
     #Descriptor=[i.text.replace('\n',' ') for i in bs_pars.find_all(itemprop="description")]
+   
+    Information=[ID,Name[0],address[-1]['content'],float(Area[0]),Price[0],Price_currency[0],Phone_Number[0],url]
     
-    try:
-        Information=[ID,Name[0],address[-1]['content'],float(Area[0]),Price[0],Price_currency[0],Phone_Number[0],url]
-    except:
-        file_debug_information.write(ID,Name,address,Area,Price,Price_currency,Phone_Number,url,'\n')
-
     return Information
 
 
@@ -109,12 +130,12 @@ def insert_table(connect_db,massiv,count_room):
     connect_db.execute("INSERT INTO Flat VALUES ("+str(string_massiv)+")")
 
 
+run(host='localhost', port=8080)
 
 
 
 
-
-flag=1
+'''flag=1
 while flag==True:
     try:
         a=int(input("Выберите вариант:\n1.Создать таблицу напишите - 1;\n2.Парсинг страниц и заполнение таблицы(только после создания или пересоздания таблицы) - 2;\n3.Выход - 3\n",))
@@ -128,7 +149,7 @@ while flag==True:
         parsing_offer(cur,Apart_link)
         print('\nТаблица заполнина\n')
     elif a==3:
-        flag=0
+        flag=0'''
         
-file_debug_information.close()
+
 con.close()
