@@ -15,27 +15,35 @@ cur = con.cursor()
 def select():
     cur.execute("SELECT * FROM Flat")
     result = cur.fetchall()
-    result.replace(' ','\n')
+    output = template('select_all', result=result)
+    #result.replace(' ','\n')
     print(result)
-    return template('<b>{{name}}</b>!', name=result)
+    return output
 
-@route('/hello/<name>')
-def index(name):
-    return template('<b>Hello {{name}}</b>!', name=name)
-
-@route('/insert', method='GET')
+@route('/insert', method='POST')
 def insert():
-    if request.GET.save:
-        id = str(cursor.lastrowid+1)
-        href = request.GET.href.strip()
-        title = request.GET.title.strip()
-        cursor.execute("INSERT INTO links VALUES(?,?,?)", (id, href, title))
-        new_id = cursor.lastrowid
-
-        conn.commit()
+    if request.POST.save:
+        ID = request.POST.ID.strip()#1
+        Name_Offer = request.POST.Name_Offer.strip()#2
+        Count_room = request.POST.Count_room.strip()#3
+        Adress = request.POST.Adress.strip()#4
+        Area = request.POST.Area.strip()#5
+        Price = request.POST.Price.strip()#6
+        Price_currency = request.POST.Price_currency.strip()#7
+        Phone_Number = request.POST.Phone_Number.strip()#8
+        Link = request.POST.Link.strip()#9
+        try:
+            cur.execute("INSERT INTO links VALUES(?,?,?,?,?,?,?,?,?)", (ID, Name_Offer, Count_room, Adress, Area, Price, Price_currency, Phone_Number, Link))
+            con.commit()
+            return '<p>>The new Ad was inserted into the database, the ID is %s</p>' % ID
+        except:
+            print('Data already exists')
+            logging.error('This is an error insert', exc_info=True)
+            logging.info('This is an error insert', exc_info=True)
+            return '<p>>The new Ad already exists into the database, the ID is %s</p>' % ID
 
     else:
-        return template('new_task.tpl')
+        return template('insert_db.tpl')
 
 
 site='https://www.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=1&room2=1'
